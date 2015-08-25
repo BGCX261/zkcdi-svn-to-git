@@ -1,0 +1,589 @@
+#!/bin/bash
+# release
+#
+#{{IS_NOTE
+#	Purpose:
+#		
+#	Description:
+#		
+#	History:
+#		Mon Nov 14 14:29:09     2005, Created by tomyeh
+#}}IS_NOTE
+#
+#Copyright (C) 2005 Potix Corporation. All Rights Reserved.
+#
+#{{IS_RIGHT
+#}}IS_RIGHT
+#
+stamp=$(date +%Y-%m-%d)
+
+target=$1
+
+setting=build.setting.local
+if [ ! -f $setting ] ; then
+	setting=build.setting
+	if [ ! -f $setting ] ; then
+		echo $setting must be specified
+		exit 1
+	fi
+fi
+javadocdir=$(grep '^javadoc' $setting)
+javadocdir=${javadocdir#javadoc=}
+if [ "$javadocdir" = "" ] ; then
+	echo javadoc must be specified in $setting
+	exit 1
+fi
+javadocdir=${javadocdir/\~/$HOME}
+if [ ! -d "$javadocdir" ] ; then
+	echo $javadocdir is not found
+	exit 1
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ver=$(grep '^version=' $setting)
+ver=${ver#version=}
+
+#jar
+if [ "$target" == "official" ] ; then
+	binnm=zkcdi-bin-$ver
+	
+
+
+
+
+
+	demonm=zkcdi-demo-$ver
+	javadocnm=zkcdi-javadoc-$ver
+	srcnm=zkcdi-src-$ver
+
+
+	echo "Release $binnm..."
+elif [ "$target" == "" ] || [ "$target" == "daily" ] ; then
+	target=daily
+
+	binnm=zkcdi-bin-$ver-$stamp
+	stdnm=zkcdi-bin-$ver-$stamp
+
+
+
+
+
+	demonm=zkcdi-demo-$ver-$stamp
+	javadocnm=zkcdi-javadoc-$ver-$stamp
+	srcnm=zkcdi-src-$ver-$stamp
+	docnm=zkcdi-doc-$ver-$stamp
+	echo "Release $binnm..."
+else
+	echo "Usage: release [ official | daily ]"
+	echo Default: daily
+	exit 1
+fi
+
+rm -rf /tmp/zkcdi
+rm -rf /tmp/maven
+maindir="$(pwd)"
+echo "Working directory $maindir"
+
+#build *-all.war *-all.ear
+if [ "$target" == "official" ] ; then
+	rm -rf dist/lib/zkcdidemo*.war
+	cp -f zkcdidemo/war.libs.all zkcdidemo/war.libs
+	./build clean zkcdidemo
+	./build zkcdidemo
+
+	mv dist/lib/zkcdidemo.war dist/lib/zkcdidemo-all.war
+
+	cp -f zkcdidemo/war.libs.minimal zkcdidemo/war.libs
+	./build clean zkcdidemo
+	./build zkcdidemo
+fi
+if [ "$target" == "daily" ] ; then
+	rm -rf dist/lib/zkcdidemo*.war
+	cp -f zkcdidemo/war.libs.all zkcdidemo/war.libs
+	./build clean zkcdidemo
+	./build zkcdidemo
+
+	mv dist/lib/zkcdidemo.war dist/lib/zkcdidemo-all.war
+
+	cp -f zkcdidemo/war.libs.minimal zkcdidemo/war.libs
+	./build clean zkcdidemo
+	./build zkcdidemo
+fi
+
+
+#Prepare the source codes
+if [ "$target" == "official" ] || [ "$target" == "daily" ] ; then
+	#mkdir -p /tmp/zkcdi/$srcnm/dist/lib/ext
+	mkdir -p /tmp/zkcdi/$srcnm/bin
+	mkdir -p /tmp/zkcdi/$srcnm/dist/src
+	mkdir -p /tmp/zkcdi/$srcnm/doc
+	chmod -R 755 $maindir
+	echo Prepare ${srcnm}.zip
+	
+
+
+
+
+
+
+
+
+	cd $maindir
+	cp bin/* /tmp/zkcdi/$srcnm/bin
+	cp build* /tmp/zkcdi/$srcnm
+	cp -rp bin /tmp/zkcdi/$srcnm
+	cp -rp zkcdi /tmp/zkcdi/$srcnm
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	cp zkcdidoc/release-note /tmp/zkcdi/$srcnm/doc
+		
+
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	cd /tmp/zkcdi/$srcnm
+	rm -rf zkcdi/debug
+	find -name .svn | xargs rm -rf
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	cd /tmp/zkcdi
+	
+	#prepare *-sources.jar
+	echo Prepare '*-sources.jar'
+	mkdir -p src/zkcdi
+
+
+
+
+
+	if [ "$target" == "official" ] ; then
+
+
+
+	cd $srcnm
+	else
+		cd $srcnm
+	fi
+	
+	
+	cp -rp zkcdi/codegen/* zkcdi/src/* ../src/zkcdi
+	
+
+
+
+
+
+
+
+
+
+
+
+	cd ..
+	
+	rm -rf src/*/archive
+	
+	echo Output '*-sources.jar'
+	cd src
+
+	find -name 'package.html' | xargs rm -rf
+	jar cfM zkcdi-sources.jar -C zkcdi .
+	
+	
+
+
+
+
+
+
+
+
+
+
+	chmod 644 *.jar
+	mv *-sources.jar ..
+	cd ..
+	rm -rf src
+
+
+	cd $maindir
+	
+	if [ "$target" == "official" ] ; then
+
+
+
+
+
+
+
+		cd /tmp/zkcdi
+		echo Output ${srcnm}.zip
+		zip -qr9 ${srcnm}.zip $srcnm
+	
+	
+	else
+		mv -f /tmp/zkcdi/*-sources.jar /tmp/zkcdi/$srcnm/dist/src
+		
+		cd /tmp/zkcdi
+		echo Output ${srcnm}.zip
+		zip -qr9 ${srcnm}.zip $srcnm
+	fi
+	
+	#Prepare the binary release
+	mkdir -p /tmp/zkcdi/$binnm/dist/lib/ext
+
+
+
+
+	mkdir -p /tmp/zkcdi/$binnm/doc
+
+	cd $maindir
+	#mv -f /tmp/zkcdi/*-sources.jar /tmp/zkcdi/$binnm/dist/src
+#	cp dist/lib/ext/commons-fileupload.jar /tmp/zkcdi/$binnm/dist/lib/ext
+		#Fileupload
+#	cp dist/lib/ext/bsh.jar /tmp/zkcdi/$binnm/dist/lib/ext
+		#BeanShell
+#	cp dist/lib/ext/dom4j-1.6.jar /tmp/zkcdi/$binnm/dist/lib/ext
+		#dom4jutilities
+#	cp dist/lib/ext/google-collections-1.0-rc3.jar /tmp/zkcdi/$binnm/dist/lib/ext
+		#googlecollections
+#	cp dist/lib/ext/javassist-3.8.0.GA.jar /tmp/zkcdi/$binnm/dist/lib/ext
+		#javassist
+#	cp dist/lib/ext/javax.inject-1.jar /tmp/zkcdi/$binnm/dist/lib/ext
+		#javaxinject
+#	cp dist/lib/ext/reflections-0.9.5-RC1.jar /tmp/zkcdi/$binnm/dist/lib/ext
+		#reflections
+#	cp dist/lib/ext/weld-servlet-1.0.1-Final.jar /tmp/zkcdi/$binnm/dist/lib/ext
+		#weldservlet
+#	cp dist/lib/ext/xml-apis-1.0.b2.jar /tmp/zkcdi/$binnm/dist/lib/ext
+		#xmlapis
+		
+
+
+
+
+#		cp dist/lib/zcommon.jar dist/lib/zcommons-el.jar dist/lib/zweb.jar /tmp/zkcdi/$binnm/dist/lib/
+#	cp dist/lib/zk.jar dist/lib/zul.jar dist/lib/zkplus.jar /tmp/zkcdi/$binnm/dist/lib/
+	cp dist/lib/zkcdi.jar /tmp/zkcdi/$binnm/dist/lib/
+#	cp dist/lib/zkex.jar /tmp/zkcdi/$binnm/dist/lib/
+	chmod 644 /tmp/zkcdi/$binnm/dist/lib/*.jar
+	chmod 644 /tmp/zkcdi/$binnm/dist/lib/*/*.jar
+
+
+
+
+
+
+
+
+
+
+
+	cp zkcdidoc/release-note /tmp/zkcdi/$binnm/doc
+		
+	chmod 644 /tmp/zkcdi/$binnm/doc/release-note
+
+
+	cd /tmp/zkcdi/$binnm/doc
+	find -name .svn | xargs rm -rf
+		
+
+
+
+
+
+
+
+
+
+
+		cd /tmp/zkcdi
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	#Ouput ${binnm}
+	if [ "$target" == "official" ] ; then
+		# License
+
+
+
+
+
+
+
+		cd /tmp/zkcdi
+		echo Output ${binnm}.zip
+		zip -qr9 ${binnm}.zip $binnm
+		
+		echo Output ${binnm}.tar.gz
+		tar zcf ${binnm}.tar.gz $binnm
+		
+
+
+
+
+
+		cd /tmp/zkcdi
+	fi
+		
+
+		
+		
+	#Ouput ${profnm}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+	cd /tmp/zkcdi
+
+
+	
+	# PE version
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	#Ouput ${stdnm}
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	if [ "$target" == "official" ] ; then
+
+
+
+		mkdir proprietary
+		mv ${binnm}.zip ${binnm}.tar.gz proprietary
+		
+		#Prepare the doc
+		cd $maindir
+		#$maindir/bin/javadoc "$javadocdir/ZKCDI"
+	fi
+
+	rm -rf $binnm
+	
+	#Prepare the java doc
+	cd $javadocdir
+
+	echo Output ${javadocnm}.zip
+	zip -qr9 ${javadocnm}.zip zkcdi
+	mv ${javadocnm}.zip /tmp/zkcdi
+
+	mkdir -p /tmp/zkcdi/$demonm/zkcdidemo/WebContent
+	mkdir -p /tmp/zkcdi/$demonm/zkcdidemo/src/org
+	mkdir -p /tmp/zkcdi/$demonm/doc
+
+	cd $maindir
+
+	cp -rp zkcdidemo/src/archive/* /tmp/zkcdi/$demonm/zkcdidemo/WebContent
+	#cp -rp zkcdidemo/codegen/archive/* /tmp/zkcdi/$demonm/zkcdidemo/WebContent
+	cp -rp zkcdidemo/src/org/* /tmp/zkcdi/$demonm/zkcdidemo/src/org
+
+
+	cp dist/lib/zkcdidemo.war /tmp/zkcdi/$demonm/zkcdidemo-min.war
+
+
+	cd zkcdidoc
+
+
+
+
+
+	cd /tmp/zkcdi/$demonm/doc
+	find -name .svn | xargs rm -rf
+	
+	cd $maindir
+	
+
+
+
+
+
+	mv dist/lib/zkcdidemo-all.war /tmp/zkcdi/$demonm/zkcdidemo.war
+		
+	cd /tmp/zkcdi
+	find -name .svn | xargs rm -rf
+
+	echo Output ${demonm}.zip
+	zip -qr9 ${demonm}.zip $demonm
+	rm -rf $demonm
+fi
